@@ -1,0 +1,180 @@
+\documentclass[12pt]{article}
+\usepackage{color}
+\usepackage{ctex}
+\usepackage{indentfirst}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{xltxtra}
+\usepackage{texnames}
+\usepackage{mflogo}
+\usepackage{float}
+\usepackage{times} %使得英文默认字体都是Times New Roman
+\usepackage[justification=centering]{caption}%让图标题居中的包
+\usepackage{setspace}%单倍行距宏包
+\renewcommand{\baselinestretch}{1.0}%单倍行距
+\usepackage{indentfirst}
+\setlength{\parindent}{2em}%首行缩进2个汉字
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{authblk}
+\usepackage{abstract}
+\usepackage[a4paper,left=19mm,right=19mm,top=31mm,bottom=31mm]{geometry} % 设置页面的环境,a4纸张大小，左右上下边距信息
+\newcommand{\zhengwen}{\songti\zihao{5}{\textbf{\textsf{}}}}
+\title{\textbf{基于图论分析的碎纸片拼接复原}}  %文章标题
+\author{\textbf {李\quad 想\qquad 黄家辉}}  %作者的名称
+\date{} %去掉日期
+
+
+\begin{document}
+    \maketitle %y显示标题
+     \begin{abstract} 
+    \renewcommand{\abstractname}{\large Abstract\\}
+    破碎文件的拼接在司法物证复原、历史文献修复以及军事情报获取等领域都有着重要的应用。区别于传统人工拼接的方法，本文采用图论分析的方法，利用计算机进行破碎文件的拼接复原。
+    针对问题一，对于来自单面同一页印刷文字文件的破碎纸片（仅纵切）情形，建立TSP模型，由于所给图片信息（像素点、图片边界等）全面且清晰，故可在没有人工干预下，就完成图片的复原。
+    针对问题二，对于来自单面同一页印刷文字文件的破碎纸片（既纵切又横切）情形，通过对每个碎片图像进行水平投影，得到每个碎片中文字的行高和行间距信息。之后，根据行高和行间距信息，采用聚类分析法（行聚类）将碎纸片还原到各自所在的行，再对行内碎片使用的TSP模型复原成正确的“横条”，部分需要人工干预，最后将“横条”拼接成原始文件。
+    针对问题三，对于双面打印文件的碎纸片(既纵切又横切)拼接复原情形，碎片正面按顺序正确拼接的话，背面的信息也必将按照相反的顺序准确拼接。因此，一个碎片的正反面信息可以经过左右、上下翻转扩展成一个整体，以提高行内拼接的正确性。经过2种不同组合的扩展，可以形成418个扩展碎片。然后利用扩展碎片中的行高、行间距等信息，按照问题2中的方法，进行行内聚类，以及用TSP方法进行拼接，最终获得完整的恢复结果。
+\par    
+
+         \end{abstract}
+  %  {\textbf{{\kaishu\zihao{-2}{摘\quad 要：}}{\songti\zihao{-4}{wenzi} }}}
+
+   { \textbf{{\kaishu\zihao{-2}{关键词：}}{\songti\zihao{-4}碎纸片拼接复原 \quad  图论分析 \quad TSP模型 \quad  聚类分析 }}}
+
+   %正文用函数编写
+   {
+        {\centering\section{问题重述}}
+       {破碎文件的拼接复原在各个方面的广泛应用，使得研究怎么样让破碎文件快速拼接复原很有意义。传统上，拼接复原工作需由人工完成，准确率较高，但效率很低。特别是当碎片数量巨大，人工拼接很难在短时间内完成任务。随着计算机技术的发展，人们试图开发碎纸片的自动拼接技术，以提高拼接复原效率。请讨论以下问题：
+       \par 1. 对于给定的来自同一页印刷文字文件的碎纸机破碎纸片（仅纵切），建立碎纸片拼接复原模型和算法，并针对附件1、附件2给出的中、英文各一页文件的碎片数据进行拼接复原。如果复原过程需要人工干预，请写出干预方式及干预的时间节点。复原结果以图片形式及表格形式表达。
+       \par 2. 对于碎纸机既纵切又横切的情形，请设计碎纸片拼接复原模型和算法，并针对附件3、附件4给出的中、英文各一页文件的碎片数据进行拼接复原。如需人工干预，要求同上。
+       \par 3. 上述所给碎片数据均为单面打印文件，从现实情形出发，还可能有双面打印文件的碎纸片拼接复原问题需要解决。附件5给出的是一页英文印刷文字双面打印文件的碎片数据。请尝试设计相应的碎纸片拼接复原模型与算法，并就附件5的碎片数据给出拼接复原结果。
+         }
+
+       {\centering\section{模型的假设和符号的规定}}
+       \subsection{模型的假设}
+       \par 1需拼接复原的文件是纯文本的打印文件，无手写文字及图片内容，因此文字比较规范、大小一致、行高和行间距一致；
+\par 2.碎纸片由计算机生成没有毛边（比较容易处理）、且没有旋转；
+\par 3.灰度图像的二值化：题目所给附件图像均为灰度图像，但是由于其中内容仅为“白底黑字”，所以可以将图像进行二值化，变为二值图像。
+
+
+       \subsection{符号的意义}
+       \begin{table}[H]        
+        \setlength{\abovecaptionskip}{-5mm}
+        \setlength{\belowcaptionskip}{-3mm}
+        \caption{\heiti\zihao{-5}符号的意义}
+        \vspace{20pt}
+        \centering
+        \begin{tabular}{p{2cm}p{3cm}p{2.5cm}p{2.5cm}p{2.5cm}p{2.5cm}}
+            \hline
+            符号 & 意义 \\
+            \hline
+           a & 字母a\\
+           b & 字母b\\    
+            \hline       
+        \end{tabular}
+        \label{bs2}
+    \end{table}
+      %     \begin{gather} % 公式带编号
+      %       a + b +c = b + a \\  %换行\\
+      %       1+2 = 2 + 1 \\y=x^2
+      %   \end{gather}
+
+      %  %插入图片
+      %  \begin{figure}[H] %[]控制图片 浮动 [ht]here在这里插入t表示的是在页面的顶部插入
+      %   \includegraphics[scale=0.3,height=3cm]{a (1).png}
+      %   \centering\caption{\heiti\zihao{-5}西行纪}   %centering居中 caption{添加文字}
+      %  \end{figure}
+       
+       {\centering\section{问题分析}}%一级标题
+       \subsection{问题一的分析}
+       对于来自单面同一页印刷文字文件的破碎纸片（仅纵切）情形，建立TSP模型，由于所给图片信息（像素点、图片边界等）全面且清晰，故可在没有人工干预下，就完成图片的复原。
+           %插入表格
+           \begin{table}[H]        
+            \setlength{\abovecaptionskip}{-5mm}
+            \setlength{\belowcaptionskip}{-3mm}
+            \caption{\heiti\zihao{-5}basic structure}
+            \vspace{20pt}
+            \centering
+            \begin{tabular}{p{2cm}p{3cm}p{2.5cm}p{2.5cm}p{2.5cm}p{2.5cm}}
+                \hline
+                Gene name & Gene accession No. & CDS length (bp) & Protein size (aa) & Protein MW (kDa) \\
+                \hline
+                001  & 01g009860.2   & 819             & 272               & 31.34            \\
+                002  & 01g021730.2   & 798             & 265               & 30.37            \\
+                003  & 01g094490.2   & 630             & 209               & 24.58            \\
+                004  & 01g102740.2   & 1242            & 413               & 46.94            \\
+                005  & 01g104900.2   & 597             & 198               & 22.85            \\
+                006  & 02g036430.1   & 1698            & 565               & 64.88            \\
+                007  & 02g061780.2   & 735             & 244               & 28.23            \\
+                008  & 02g061870.1   & 660             & 219               & 25.21            \\
+                009  & 02g061900.1   & 915             & 304               & 34.61            \\
+                010  & 02g061910.1   & 795             & 264               & 29.92 \\    
+                \hline       
+            \end{tabular}
+            \label{bs2}
+        \end{table}
+         
+       \subsection{问题二的分析}
+       对于来自单面同一页印刷文字文件的破碎纸片（既纵切又横切）情形，通过对每个碎片图像进行水平投影，得到每个碎片中文字的行高和行间距信息。之后，根据行高和行间距信息，采用聚类分析法（行聚类）将碎纸片还原到各自所在的行，再对行内碎片使用的TSP模型复原成正确的“横条”，部分需要人工干预，最后将“横条”拼接成原始文件。
+       
+       \subsection{问题三的分析}%二级标题
+       对于双面打印文件的碎纸片(既纵切又横切)拼接复原情形，碎片正面按顺序正确拼接的话，背面的信息也必将按照相反的顺序准确拼接。因此，一个碎片的正反面信息可以经过左右、上下翻转扩展成一个整体，以提高行内拼接的正确性。经过2种不同组合的扩展，可以形成418个扩展碎片。然后利用扩展碎片中的行高、行间距等信息，按照问题2中的方法，进行行内聚类，以及用TSP方法进行拼接，最终获得完整的恢复结果。
+       
+
+       {\centering\section{问题一模型的建立与求解}}
+       本问针对，来自单面同一页印刷文字文件的破碎纸片（仅纵切）情形，所给信息全面，因此不用人工干预即可复原。
+       \subsection{将所给图片附件信息录入获取矩阵}
+      \par
+
+      \subsection{分析拼接复原的条件}
+      矩阵第一列与另一矩阵的差值小于（）是即认为两组矩阵所对应的两张图片可进行第一张矩阵对应的图片左侧可与第二个矩阵所对应的图片右侧进行拼接
+        
+      \subsection{模型的建立与求解}
+         矩阵对应式
+
+
+       {\centering\section{问题二模型的建立与求解}}
+       本问针对，来自单面同一页印刷文字文件的破碎纸片（既纵切又横切）情形，不同于第一问，本问需考虑横切所带来，每片碎片（图片）所给信息不足的问题。
+       \subsection{分析所得图片像素信息，进行聚类分析}
+       分析内容
+        \subsubsection{利用TSP模型将行聚类的图片拼成“横条”}
+      
+       \subsection{更改TSP模型拼接“横条”}
+       
+    
+       {\centering\section{问题三模型的建立与求解}}
+       本问针对，双面打印文件的碎纸片(既纵切又横切)拼接复原情形，碎片正面拼接正确的话，背面也一定是拼接正确，故将碎片进行左右、上线翻转扩展成一个整体，以提高信息。
+       \subsection{碎片的翻转}
+         \par
+       \subsection{信息对比}
+         \par
+       \subsection{拼接条件}
+         \par
+       {\centering\section{模型的优缺点及改进方向}}
+       \subsection{模型分析}
+         \par 1.	第一问未考虑，当像素点一致时，不可拼接情况，该情况可由人工干预，将拼接错误的随便进行分解，重新拼接。
+      
+
+   }
+
+   %参考文献
+   \begin{thebibliography}{5}
+   
+    \end{thebibliography}
+
+
+   %附录
+   \appendix{tocdepth}{2}
+   {\centering\section{附录 1:拼接图片结果}}
+ \subsection{第一问}
+    图片
+ \subsection{第二问}
+    \subsubsection{中文拼接结果}
+    \subsubsection{英文拼接结果}
+ \subsection{第三问}
+  some text...
+
+  {\centering\section{附录 2：论文所用程序}}
+  \subsection{程序：}
+  程序：
+
+\end{document}      
